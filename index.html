@@ -10,9 +10,9 @@
     rel="stylesheet"
   />
 
-  <script type="module" crossorigin src="https://mapsmania.github.io/sprites/index-e61LCIjh.js"></script>
-    <link rel="stylesheet" crossorigin href="https://mapsmania.github.io/sprites/index-BPbBbLQu.css">
-  
+  <!-- Sprite CSS -->
+  <link rel="stylesheet" crossorigin href="https://mapsmania.github.io/sprites/index-BPbBbLQu.css">
+
   <style>
     html, body {
       margin: 0;
@@ -31,10 +31,14 @@
 
   <!-- MapLibre GL JS -->
   <script src="https://unpkg.com/maplibre-gl@3.4.0/dist/maplibre-gl.js"></script>
- 
 
-  <script>
-  
+  <!-- Sprite Module Loader -->
+  <script type="module">
+    // Load the GitHub module dynamically and attach exports to window
+    const module = await import('https://mapsmania.github.io/sprites/index-e61LCIjh.js');
+    window.createSpriteLayer = module.createSpriteLayer;
+    window.initializeRuntimeHost = module.initializeRuntimeHost;
+
     // Initialize MapLibre map
     const map = new maplibregl.Map({
       container: 'map',
@@ -47,12 +51,12 @@
       console.log('Map loaded successfully!');
 
       // Initialize SpriteLayer runtime (WASM)
-      await initializeRuntimeHost({
-        wasmBaseUrl: './maplibre-gl-layers/wasm/'
+      await window.initializeRuntimeHost({
+        wasmBaseUrl: 'https://mapsmania.github.io/sprites/wasm/' // adjust if needed
       });
 
       // Create a SpriteLayer
-      const spriteLayer = createSpriteLayer({ id: 'city-labels' });
+      const spriteLayer = window.createSpriteLayer({ id: 'city-labels' });
       map.addLayer(spriteLayer);
 
       // Example cities
