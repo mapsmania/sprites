@@ -2,42 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OpenFreeMap + Moving Sprites</title>
-
-  <!-- MapLibre GL CSS -->
-  <link
-    href="https://unpkg.com/maplibre-gl@3.4.0/dist/maplibre-gl.css"
-    rel="stylesheet"
-  />
-
-  <!-- Sprite CSS -->
-  <link rel="stylesheet" crossorigin href="https://mapsmania.github.io/sprites/index-BPbBbLQu.css">
-
+  <title>Independent Animated City Labels</title>
+  <link href="https://unpkg.com/maplibre-gl@3.4.0/dist/maplibre-gl.css" rel="stylesheet" />
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+    #map { width: 100%; height: 100%; }
   </style>
 </head>
 <body>
-  <div id="app"></div> <!-- required by the sprite library -->
   <div id="map"></div>
-
   <script src="https://unpkg.com/maplibre-gl@3.4.0/dist/maplibre-gl.js"></script>
-
-  <script type="module">
-    // Load the sprite library dynamically
-    const module = await import('https://mapsmania.github.io/sprites/index-e61LCIjh.js');
-    const { createSpriteLayer, initializeRuntimeHost } = module;
-
-    // Initialize MapLibre map
+  <script>
     const map = new maplibregl.Map({
       container: 'map',
       style: 'https://tiles.openfreemap.org/styles/liberty',
@@ -46,16 +21,54 @@
     });
 
     map.on('load', async () => {
-      // Initialize SpriteLayer runtime (WASM)
-      await initializeRuntimeHost({
-        wasmBaseUrl: 'https://mapsmania.github.io/sprites/wasm/'
+      // 1. Get the city features from the existing source
+      const cityLayerId = 'label_city';
+      const citySourceId = map.getLayer(cityLayerId).source;
+
+      const cityData = await fetch(`https://tiles.openfreemap.org/data/${citySourceId}.geojson`)
+        .then(res => res.json())
+        .catch(() => null);
+
+      if (!cityData) {
+        console.error('Could not load city features');
+        return;
+      }
+
+      // 2. Add a new layer for each city with independent animation
+      cityData.features.forEach((feature, index) => {
+        const layerId = `animated-city-${index}`;
+        const coordinates = feature.geometry.coordinates;
+        const cityName = feature.properties.name || 'City';
+
+        map.addSource(layerId, {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: [{ type: 'Feature', geometry: { type: 'Point', coordinates } }]
+          }
+        });
+
+        map.addLayer({
+          id: layerId,
+          type: 'symbol',
+          source: layerId,
+          layout: {
+            'text-field': cityName,
+            'text-size': 14,
+            'text-anchor': 'top'
+          }
+        });
+
+        // Animate this label independently
+        function animateLabel() {
+          const tx = (Math.random() - 0.5) * 40; // X offset
+          const ty = (Math.random() - 0.5) * 40; // Y offset
+          map.setPaintProperty(layerId, 'text-translate', [tx, ty]);
+        }
+
+        animateLabel();
+        setInterval(animateLabel, 2000);
       });
-
-      // Create and add a SpriteLayer
-      const spriteLayer = createSpriteLayer({ id: 'city-labels' });
-      map.addLayer(spriteLayer);
-
-      // Add some moving city labels (same as before)
     });
   </script>
 </body>
